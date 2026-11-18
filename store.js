@@ -11,7 +11,7 @@
 
   var cache = { products: [], videos: [], settings: {} };
   var mode = 'local';
-  var caps = { sample: null, downloads: null };
+  var caps = { sample: null, sampleLimits: null, downloads: null };
   var refs = null;
   var listeners = [];
 
@@ -44,7 +44,10 @@
 
     caps.sample = null;
     // AI・ダウンロードは後から使えるようになれば有効化
-    c.use('sample').then(function (s) { caps.sample = s; emit('caps'); }, function () {});
+    c.use('sample').then(function (s) {
+      caps.sample = s; emit('caps');
+      if (s && s.limits) s.limits().then(function (l) { caps.sampleLimits = l; emit('caps'); }, function () {});
+    }, function () {});
     c.use('downloads').then(function (d) { caps.downloads = d; emit('caps'); }, function () {});
 
     return withTimeout(Promise.all([c.use('db'), c.use('user')]), 12000).then(function (res) {

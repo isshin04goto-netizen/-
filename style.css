@@ -228,3 +228,12 @@ a { color: var(--accent-2); overflow-wrap: anywhere; }
   .toast { animation: rise .2s ease-out; }
   @keyframes rise { from { transform: translate(-50%, 8px); opacity: 0; } }
 }
+
+/* 自動入力 */
+.toolbar .scan { grid-column: 1 / -1; border-color: var(--accent-2); color: var(--text); font-weight: 600; }
+.note { background: var(--sunk); border-left: 4px solid var(--accent-2); border-radius: 6px 10px 10px 6px; padding: 8px 12px; font-size: .84rem; margin: 0 0 12px; }
+.spinner { width: 28px; height: 28px; border-radius: 50%; border: 3px solid var(--sunk); border-top-color: var(--accent); margin: 12px auto 4px; }
+@media (prefers-reduced-motion: no-preference) {
+  .spinner { animation: spin .9s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+}

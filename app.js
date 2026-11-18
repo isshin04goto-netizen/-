@@ -46,6 +46,19 @@
     });
   }
 
+  function sampleError(code) {
+    return {
+      not_granted: 'Claudeの利用が許可されませんでした。許可すると使えます。',
+      sampling_disabled: 'このアカウントではここからClaudeを使えません。',
+      rate_limited: '利用が混み合っているか、利用枠の上限です。少し時間をおいてお試しください。',
+      refused: 'この内容は読み取れませんでした。別の画像や台本でお試しください。',
+      prompt_too_large: '内容が長すぎます。短くしてお試しください。',
+      invalid_json: 'うまく読み取れませんでした。文字がはっきり写ったスクショでもう一度お試しください。',
+      image_rejected: '画像の形式かサイズが合いません。スクショ（PNG・JPEG）でお試しください。',
+      images_unavailable: 'この画面では画像を送れません。'
+    }[code] || 'うまくいきませんでした。少し時間をおいてもう一度お試しください。';
+  }
+
   // ---------- tabs ----------
   function showTab(name) {
     ['products', 'videos'].forEach(function (t) {
@@ -129,9 +142,10 @@
     });
     return d;
   }
-  function openForm(p) {
-    editingId = p ? p.id : null;
-    $('#form-title').textContent = p ? '商品を編集' : '商品を追加';
+  function openForm(p, note) {
+    editingId = p && p.id ? p.id : null;
+    $('#form-title').textContent = editingId ? '商品を編集' : '商品を追加';
+    $('#form-note').textContent = note || ''; $('#form-note').hidden = !note;
     form.reset();
     FIELDS.forEach(function (f) { if (p && p[f[0]] != null) form.elements[f[0]].value = p[f[0]]; });
     if (!p) form.elements.visual.value = 3;
@@ -429,9 +443,10 @@
     });
     return d;
   }
-  function openVForm(v) {
-    vEditingId = v ? v.id : null;
-    $('#vform-title').textContent = v ? '動画を編集' : '動画を分析';
+  function openVForm(v, note) {
+    vEditingId = v && v.id ? v.id : null;
+    $('#vform-title').textContent = vEditingId ? '動画を編集' : '動画を分析';
+    $('#vform-note').textContent = note || ''; $('#vform-note').hidden = !note;
     vform.reset();
     VFIELDS.forEach(function (k) { if (v && v[k] != null) vform.elements[k].value = v[k]; });
     updateVPreview();
@@ -569,14 +584,7 @@
         var code = e && e.code;
         out.textContent = (e && e.text) || v.aiNote || '';
         if (code === 'cancelled') return;
-        var msg = {
-          not_granted: 'Claudeの利用が許可されませんでした。「プロンプトをコピー」から claude.ai で使えます。',
-          sampling_disabled: 'このアカウントではここからClaudeを使えません。「プロンプトをコピー」をお使いください。',
-          rate_limited: '利用が混み合っているか、利用枠の上限です。少し時間をおいてお試しください。',
-          refused: 'この内容は分析できませんでした。台本の内容を見直してください。',
-          prompt_too_large: '台本が長すぎます。短くしてお試しください。'
-        }[code] || 'うまくいきませんでした。少し時間をおいてもう一度お試しください。';
-        toast(msg);
+        toast(sampleError(code));
         if (code === 'not_granted' || code === 'sampling_disabled') { Store.caps.sample = null; run.hidden = true; }
       }).then(function () {
         run.disabled = false; stop.hidden = true; aiCtl = null;
@@ -635,9 +643,95 @@
   $('#vfilter').oninput = renderVideos;
 
   // =====================================================================
+  // スクショ・動画から自動入力
+  // =====================================================================
+  var scanCtl = null;
+  function imageLimits() { return Store.caps.sample && Store.caps.sampleLimits && Store.caps.sampleLimits.images; }
+  function updateScanButtons() {
+    var L = imageLimits();
+    $('#btn-scan').hidden = !L; $('#btn-vscan').hidden = !L; $('#vscan-hint').hidden = !L;
+    if (L) {
+      $('#scan-in').accept = L.mediaTypes.join(',');
+      $('#vscan-in').accept = L.mediaTypes.join(',') + ',video/*';
+    }
+  }
+  function scanStatus(msg) {
+    $('#scan-status').textContent = msg;
+    if (!$('#dlg-scan').open) $('#dlg-scan').showModal();
+  }
+  $('#scan-stop').onclick = function () { if (scanCtl) scanCtl.abort(); $('#dlg-scan').close(); };
+  $('#dlg-scan').addEventListener('cancel', function () { if (scanCtl) scanCtl.abort(); });
+
+  function runScan(kind, fileList) {
+    var L = imageLimits();
+    var sample = Store.caps.sample;
+    if (!L || !sample) return;
+    var files = Array.prototype.slice.call(fileList || []);
+    var notes = [];
+    var imgs = files.filter(function (f) { return L.mediaTypes.indexOf(f.type) >= 0 && f.size <= L.maxInputBytes; });
+    var vid = kind === 'videos' ? files.filter(function (f) { return /^video\//.test(f.type); })[0] : null;
+    var dropped = files.length - imgs.length - (vid ? 1 : 0);
+    if (dropped > 0) notes.push(dropped + '個のファイルは形式かサイズが合わず使いませんでした。');
+    if (!imgs.length && !vid) { toast(kind === 'videos' ? 'スクショ（PNG・JPEG）か動画ファイルを選んでください' : 'スクショ（PNG・JPEG）を選んでください'); return; }
+
+    var maxShots = vid ? Math.min(imgs.length, 2) : Math.min(imgs.length, L.maxCount);
+    if (imgs.length > maxShots) notes.push('画像は' + maxShots + '枚まで使いました。');
+    var shots = imgs.slice(0, maxShots);
+    var frameCount = vid ? Math.max(0, Math.min(8, L.maxCount - shots.length)) : 0;
+
+    scanCtl = new AbortController();
+    var ctl = scanCtl;
+    var prep = vid && frameCount > 0
+      ? (scanStatus('動画からコマを取り出しています…'), Scan.extractFrames(vid, frameCount))
+      : Promise.resolve(null);
+
+    prep.then(function (fr) {
+      if (ctl.signal.aborted) return;
+      var blobs = shots.slice();
+      var prompt;
+      if (kind === 'products') {
+        prompt = Scan.PRODUCT_PROMPT;
+      } else {
+        if (fr) fr.frames.forEach(function (f) { blobs.push(f.blob); });
+        prompt = Scan.videoPrompt({
+          screenshots: shots.length,
+          frameTimes: fr ? fr.frames.map(function (f) { return f.t; }) : [],
+          duration: fr ? fr.duration : 0
+        });
+      }
+      scanStatus('Claudeが画像を読み取っています…（30秒〜1分ほど）');
+      return sample.json(prompt, { images: blobs, signal: ctl.signal, cache: false }).then(function (res) {
+        $('#dlg-scan').close();
+        var note = 'Claudeが画像から読み取りました。数字が合っているか確認してから保存してください。' + (notes.length ? ' ' + notes.join(' ') : '');
+        if (kind === 'products') {
+          openForm(Scan.normalizeProduct(res), note);
+        } else {
+          var v = Scan.normalizeVideo(res, fr && fr.duration);
+          if (!shots.length) note += ' 再生数などの数字は動画ファイルからは分からないので、分かれば入力してください。';
+          openVForm(v, note);
+        }
+      });
+    }).catch(function (e) {
+      $('#dlg-scan').close();
+      if (e && e.code === 'cancelled') return;
+      if (e instanceof Error) { toast(e.message); return; }
+      toast(sampleError(e && e.code));
+      if (e && (e.code === 'not_granted' || e.code === 'sampling_disabled' || e.code === 'images_unavailable')) {
+        Store.caps.sampleLimits = null; updateScanButtons();
+      }
+    }).then(function () { if (scanCtl === ctl) scanCtl = null; });
+  }
+
+  $('#btn-scan').onclick = function () { $('#scan-in').click(); };
+  $('#btn-vscan').onclick = function () { $('#vscan-in').click(); };
+  $('#scan-in').addEventListener('change', function (e) { runScan('products', e.target.files); e.target.value = ''; });
+  $('#vscan-in').addEventListener('change', function (e) { runScan('videos', e.target.files); e.target.value = ''; });
+
+  // =====================================================================
   // 起動
   // =====================================================================
   Store.on(function (kind, info) {
+    if (kind === 'caps') { updateScanButtons(); return; }
     if (info.slow) toast('データの読み込みに時間がかかっています…');
     if (info.error) toast('データを読み込めませんでした。ページを開き直してください。');
     if (kind === 'products' || kind === 'settings') renderProducts();

@@ -34,6 +34,8 @@
           <option value="created">追加順</option>
         </select>
         <input id="filter" type="search" placeholder="商品名・カテゴリで検索">
+        <button id="btn-scan" class="scan" hidden>スクショから自動入力</button>
+        <input id="scan-in" type="file" accept="image/*" multiple hidden>
       </div>
 
       <div id="summary" class="summary"></div>
@@ -74,7 +76,10 @@
           <option value="created">追加順</option>
         </select>
         <input id="vfilter" type="search" placeholder="商品名・投稿者で検索">
+        <button id="btn-vscan" class="scan" hidden>スクショ・動画から自動分析</button>
+        <input id="vscan-in" type="file" accept="image/*,video/*" multiple hidden>
       </div>
+      <p id="vscan-hint" class="hint" hidden>動画ファイル（保存した動画や画面録画）を選ぶとテロップから台本を読み取ります。再生数などの数字は、プロフィールの動画一覧や動画画面のスクショを一緒に選んでください。</p>
 
       <div id="vpatterns"></div>
       <ul id="vlist" class="list"></ul>
@@ -101,6 +106,7 @@
   <dialog id="dlg-form">
     <form id="form" method="dialog">
       <h2 id="form-title">商品を追加</h2>
+      <p id="form-note" class="note" hidden></p>
       <label>商品名 *<input id="f-name" name="name" required></label>
       <label>カテゴリ<input id="f-category" name="category" list="cats" placeholder="美容、キッチン、ガジェット…"></label>
       <datalist id="cats"></datalist>
@@ -140,6 +146,7 @@
   <dialog id="dlg-vform">
     <form id="vform" method="dialog">
       <h2 id="vform-title">動画を分析</h2>
+      <p id="vform-note" class="note" hidden></p>
       <div class="grid2">
         <label>商品名<input id="v-product" name="productName" list="prodnames" placeholder="紹介している商品"></label>
         <label>投稿者<input id="v-creator" name="creator" placeholder="@アカウント名"></label>
@@ -179,6 +186,16 @@
     </div>
   </dialog>
 
+  <!-- 読み取り中 -->
+  <dialog id="dlg-scan" class="small">
+    <div class="dlg-body">
+      <h2>読み取り中</h2>
+      <p id="scan-status" class="meta"></p>
+      <div class="spinner" aria-hidden="true"></div>
+    </div>
+    <div class="actions"><button id="scan-stop">止める</button></div>
+  </dialog>
+
   <!-- 確認 -->
   <dialog id="dlg-confirm" class="small">
     <div class="dlg-body"><p id="confirm-msg"></p></div>
@@ -194,6 +211,7 @@
   <script src="score.js"></script>
   <script src="video.js"></script>
   <script src="store.js"></script>
+  <script src="scan.js"></script>
   <script src="app.js"></script>
   <!-- /build:scripts -->
 </body>
