@@ -1,0 +1,7 @@
+{
+  "name": "tiktok-affiliate-tools",
+  "private": true,
+  "scripts": {
+    "test": "node --test test/score.test.js"
+  }
+}
