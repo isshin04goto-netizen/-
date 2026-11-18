@@ -2,6 +2,7 @@
   "name": "tiktok-affiliate-tools",
   "private": true,
   "scripts": {
-    "test": "node --test test/score.test.js"
+    "test": "node --test test/score.test.js test/video.test.js",
+    "build": "node scripts/build-artifact.js"
   }
 }

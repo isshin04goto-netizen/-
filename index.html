@@ -3,76 +3,121 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#111318">
-  <title>商品分析ノート</title>
+  <!-- build:head -->
+  <title>ショップ分析ノート</title>
+  <meta name="claude:viewport-fit-sides" content="cover">
   <link rel="stylesheet" href="style.css">
+  <!-- /build:head -->
 </head>
 <body>
   <header class="topbar">
-    <h1>商品分析ノート</h1>
-    <p class="sub">TikTok Shop アフィリエイト向け</p>
+    <div class="wrap">
+      <h1>ショップ分析ノート</h1>
+      <p class="sub">TikTok Shop アフィリエイトの商品選びと動画研究 <span id="mode" class="mode"></span></p>
+      <nav class="tabs" role="tablist">
+        <button role="tab" id="tab-products" data-tab="products" aria-selected="true">商品分析</button>
+        <button role="tab" id="tab-videos" data-tab="videos" aria-selected="false">動画分析</button>
+      </nav>
+    </div>
   </header>
 
-  <main>
-    <section class="toolbar">
-      <button id="btn-add" class="primary">＋ 商品を追加</button>
-      <select id="sort" aria-label="並び替え">
-        <option value="total">総合スコア順</option>
-        <option value="commission">報酬単価順</option>
-        <option value="income">想定月収順</option>
-        <option value="demand">需要順</option>
-        <option value="created">追加順</option>
-      </select>
-      <input id="filter" type="search" placeholder="商品名・カテゴリで検索">
+  <main class="wrap">
+    <!-- ===== 商品分析 ===== -->
+    <section id="panel-products" class="panel" role="tabpanel">
+      <div class="toolbar">
+        <button id="btn-add" class="primary">＋ 商品を追加</button>
+        <select id="sort" aria-label="並び替え">
+          <option value="total">総合スコア順</option>
+          <option value="commission">報酬単価順</option>
+          <option value="income">想定月収順</option>
+          <option value="demand">需要順</option>
+          <option value="created">追加順</option>
+        </select>
+        <input id="filter" type="search" placeholder="商品名・カテゴリで検索">
+      </div>
+
+      <div id="summary" class="summary"></div>
+      <ul id="list" class="list"></ul>
+      <div id="empty" class="empty" hidden>
+        <p><b>商品を登録すると、稼ぎやすさを0〜100点で採点します。</b></p>
+        <p>価格・手数料率・月間販売数などを入れるだけ。まずはサンプルで試せます。</p>
+        <button id="btn-sample-empty">サンプルを読み込む</button>
+      </div>
+
+      <details class="more">
+        <summary>データ・設定</summary>
+        <div class="more-body">
+          <div class="row">
+            <label class="btn">CSVを取り込む<input id="csv-in" type="file" accept=".csv,text/csv" hidden></label>
+            <button id="btn-export">CSVで書き出す</button>
+            <button id="btn-sample">サンプルを読み込む</button>
+            <button id="btn-clear" class="danger">商品を全削除</button>
+          </div>
+          <p class="hint">CSVの見出し: 商品名, カテゴリ, 価格, 手数料率, 月間販売数, 評価, レビュー数, 紹介クリエイター数, 動画映え, URL, メモ</p>
+          <h3>スコアの重み</h3>
+          <p class="hint">重視したい項目ほど大きくしてください。</p>
+          <div id="weights" class="weights"></div>
+          <button id="btn-reset-w">重みを初期値に戻す</button>
+        </div>
+      </details>
     </section>
 
-    <section id="summary" class="summary"></section>
-    <ul id="list" class="list"></ul>
-
-    <div id="empty" class="empty" hidden>
-      <p>まだ商品がありません。</p>
-      <p>「＋ 商品を追加」か、下のメニューからCSV取り込み・サンプル読み込みができます。</p>
-    </div>
-
-    <details class="more">
-      <summary>データ・設定</summary>
-      <div class="more-body">
-        <div class="row">
-          <label class="btn">CSVを取り込む<input id="csv-in" type="file" accept=".csv,text/csv" hidden></label>
-          <button id="btn-export">CSVで書き出す</button>
-          <button id="btn-sample">サンプルを読み込む</button>
-          <button id="btn-clear" class="danger">全削除</button>
-        </div>
-        <p class="hint">CSVの見出し: 商品名, カテゴリ, 価格, 手数料率, 月間販売数, 評価, レビュー数, 紹介クリエイター数, 動画映え, URL, メモ</p>
-
-        <h3>スコアの重み</h3>
-        <p class="hint">重視したい項目ほど大きくしてください。</p>
-        <div id="weights" class="weights"></div>
-        <button id="btn-reset-w">重みを初期値に戻す</button>
+    <!-- ===== 動画分析 ===== -->
+    <section id="panel-videos" class="panel" role="tabpanel" hidden>
+      <div class="toolbar">
+        <button id="btn-vadd" class="primary">＋ 動画を分析</button>
+        <select id="vsort" aria-label="並び替え">
+          <option value="total">伸びスコア順</option>
+          <option value="er">エンゲージメント率順</option>
+          <option value="save">保存率順</option>
+          <option value="views">再生数順</option>
+          <option value="created">追加順</option>
+        </select>
+        <input id="vfilter" type="search" placeholder="商品名・投稿者で検索">
       </div>
-    </details>
+
+      <div id="vpatterns"></div>
+      <ul id="vlist" class="list"></ul>
+      <div id="vempty" class="empty" hidden>
+        <p><b>売れている人の動画を分析して、真似できる型を見つけます。</b></p>
+        <p>再生数・いいね・保存などの数字と、台本（文字起こし）を貼るだけ。フック・構成・CTAを自動で分解します。</p>
+        <button id="btn-vsample-empty">サンプルを読み込む</button>
+      </div>
+
+      <details class="more">
+        <summary>データ</summary>
+        <div class="more-body">
+          <div class="row">
+            <button id="btn-vsample">サンプルを読み込む</button>
+            <button id="btn-vclear" class="danger">動画を全削除</button>
+          </div>
+          <p class="hint">数字はTikTokの動画画面に出ている値を入力してください（「1.2万」のような書き方もOK）。台本はTikTokの文字起こし機能や、音声を書き起こしたものを貼り付けます。</p>
+        </div>
+      </details>
+    </section>
   </main>
 
+  <!-- 商品フォーム -->
   <dialog id="dlg-form">
     <form id="form" method="dialog">
       <h2 id="form-title">商品を追加</h2>
-      <label>商品名 *<input name="name" required></label>
-      <label>カテゴリ<input name="category" list="cats" placeholder="美容、キッチン、ガジェット…"></label>
+      <label>商品名 *<input id="f-name" name="name" required></label>
+      <label>カテゴリ<input id="f-category" name="category" list="cats" placeholder="美容、キッチン、ガジェット…"></label>
       <datalist id="cats"></datalist>
       <div class="grid2">
-        <label>価格（円）<input name="price" type="number" inputmode="decimal" min="0" step="1"></label>
-        <label>手数料率（%）<input name="commissionRate" type="number" inputmode="decimal" min="0" max="100" step="0.1"></label>
-        <label>月間販売数<input name="monthlySales" type="number" inputmode="numeric" min="0"></label>
-        <label>紹介クリエイター数<input name="creators" type="number" inputmode="numeric" min="0"></label>
-        <label>評価（★0〜5）<input name="rating" type="number" inputmode="decimal" min="0" max="5" step="0.1"></label>
-        <label>レビュー数<input name="reviews" type="number" inputmode="numeric" min="0"></label>
+        <label>価格（円）<input id="f-price" name="price" type="number" inputmode="decimal" min="0" step="1"></label>
+        <label>手数料率（%）<input id="f-rate" name="commissionRate" type="number" inputmode="decimal" min="0" max="100" step="0.1"></label>
+        <label>月間販売数<input id="f-sales" name="monthlySales" type="number" inputmode="numeric" min="0"></label>
+        <label>紹介クリエイター数<input id="f-creators" name="creators" type="number" inputmode="numeric" min="0"></label>
+        <label>評価（★0〜5）<input id="f-rating" name="rating" type="number" inputmode="decimal" min="0" max="5" step="0.1"></label>
+        <label>レビュー数<input id="f-reviews" name="reviews" type="number" inputmode="numeric" min="0"></label>
       </div>
       <label>動画映え <output id="visual-out">3</output> / 5
-        <input name="visual" type="range" min="1" max="5" step="1" value="3">
+        <input id="f-visual" name="visual" type="range" min="1" max="5" step="1" value="3">
         <span class="hint">使用前後の変化、驚き、実演のしやすさで自己評価</span>
       </label>
-      <label>商品URL<input name="url" type="url" placeholder="https://"></label>
-      <label>メモ<textarea name="memo" rows="3" placeholder="訴求ポイント、気になる点など"></textarea></label>
+      <label>商品URL<input id="f-url" name="url" type="url" placeholder="https://"></label>
+      <label>メモ<textarea id="f-memo" name="memo" rows="3" placeholder="訴求ポイント、気になる点など"></textarea></label>
       <div id="preview" class="preview"></div>
       <div class="actions">
         <button type="button" id="btn-cancel">キャンセル</button>
@@ -81,8 +126,9 @@
     </form>
   </dialog>
 
+  <!-- 商品詳細 -->
   <dialog id="dlg-detail">
-    <div id="detail"></div>
+    <div id="detail" class="dlg-body"></div>
     <div class="actions">
       <button id="btn-del" class="danger">削除</button>
       <button id="btn-edit">編集</button>
@@ -90,7 +136,65 @@
     </div>
   </dialog>
 
+  <!-- 動画フォーム -->
+  <dialog id="dlg-vform">
+    <form id="vform" method="dialog">
+      <h2 id="vform-title">動画を分析</h2>
+      <div class="grid2">
+        <label>商品名<input id="v-product" name="productName" list="prodnames" placeholder="紹介している商品"></label>
+        <label>投稿者<input id="v-creator" name="creator" placeholder="@アカウント名"></label>
+      </div>
+      <datalist id="prodnames"></datalist>
+      <label>動画URL<input id="v-url" name="url" type="url" placeholder="https://www.tiktok.com/…"></label>
+      <div class="grid3">
+        <label>再生数<input id="v-views" name="views" inputmode="decimal" placeholder="12万"></label>
+        <label>いいね<input id="v-likes" name="likes" inputmode="decimal"></label>
+        <label>コメント<input id="v-comments" name="comments" inputmode="decimal"></label>
+        <label>保存<input id="v-saves" name="saves" inputmode="decimal"></label>
+        <label>シェア<input id="v-shares" name="shares" inputmode="decimal"></label>
+        <label>長さ（秒）<input id="v-duration" name="duration" inputmode="decimal"></label>
+      </div>
+      <label>投稿者のフォロワー数（任意）<input id="v-followers" name="followers" inputmode="decimal"></label>
+      <label>台本・文字起こし
+        <textarea id="v-transcript" name="transcript" rows="6" placeholder="例）え、まだ手で毛穴の掃除してるの？これ当てるだけで…"></textarea>
+        <span class="hint">文の区切り（。や改行）ごとにフック・問題提起・CTAなどを判定します。</span>
+      </label>
+      <label>フック（任意）<input id="v-hook" name="hook" placeholder="空欄なら台本の最初の一文を使います"></label>
+      <label>映像・編集のメモ（任意）<textarea id="v-memo" name="memo" rows="2" placeholder="顔出しなし、手元アップ、テロップ大きめ、BGMはトレンド曲…"></textarea></label>
+      <div id="vpreview" class="preview"></div>
+      <div class="actions">
+        <button type="button" id="btn-vcancel">キャンセル</button>
+        <button type="submit" class="primary">保存して分析</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- 動画詳細 -->
+  <dialog id="dlg-vdetail">
+    <div id="vdetail" class="dlg-body"></div>
+    <div class="actions">
+      <button id="btn-vdel" class="danger">削除</button>
+      <button id="btn-vedit">編集</button>
+      <button id="btn-vclose" class="primary">閉じる</button>
+    </div>
+  </dialog>
+
+  <!-- 確認 -->
+  <dialog id="dlg-confirm" class="small">
+    <div class="dlg-body"><p id="confirm-msg"></p></div>
+    <div class="actions">
+      <button id="confirm-no">やめる</button>
+      <button id="confirm-yes" class="danger-fill">削除する</button>
+    </div>
+  </dialog>
+
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+  <!-- build:scripts -->
   <script src="score.js"></script>
+  <script src="video.js"></script>
+  <script src="store.js"></script>
   <script src="app.js"></script>
+  <!-- /build:scripts -->
 </body>
 </html>
